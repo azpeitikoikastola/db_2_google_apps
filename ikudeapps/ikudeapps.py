@@ -58,7 +58,7 @@ def _format_data(ac, res, domain, def_pass, org_unit_path, new_org_path):
         'givenName': to_unicode(given_name),
         'familyName': to_unicode(family_name),
         'fullName': to_unicode(full_name),
-        'orgUnitPath': exits_orgunits and orgunit or '/',
+        'orgUnitPath': orgunit in exits_orgunits and orgunit or '/',
         'password': def_pass,
         'year': year,
         'primaryEmail': _email_format("".join([given_name, family_name.split()[0], year[-2:], "@", domain]))

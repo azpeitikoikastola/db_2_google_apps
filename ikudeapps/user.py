@@ -14,13 +14,31 @@ class User():
         self.changePasswordAtNextLogin = data.get('changePasswordAtNextLogin')
 
     #TODO create (address, organizations, phones...) class and add address array on create
-    def _create_user(self, data):
+    @classmethod
+    def _create_user(cls, data):
         return User(data)
 
-    def create(self, ac, data):
+    @classmethod
+    def create(cls, ac, data):
         try:
-           user = ac.service.users().insert(body=data).execute()
-           return self._create_user(user)
+            user = ac.service.users().insert(body=data).execute()
+            return cls._create_user(user)
+        except errors.HttpError as error:
+            print 'An error occurred: %s, user_email: %s' % (error.resp['status'], data['primaryEmail'])
+
+    @classmethod
+    def get(cls, ac, email):
+        try:
+            user = ac.service.users().get(userKey=email).execute()
+            return cls._create_user(user)
+        except errors.HttpError as error:
+            print 'An error occurred: %s, user_email: %s' % (error.resp['status'], data['primaryEmail'])
+
+    @classmethod
+    def update(cls, ac, email, data):
+        try:
+            user = ac.service.users().insert(body=data, userKey=email).execute()
+            return cls._create_user(user)
         except errors.HttpError as error:
             print 'An error occurred: %s, user_email: %s' % (error.resp['status'], data['primaryEmail'])
 # {

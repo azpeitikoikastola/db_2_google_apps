@@ -4,6 +4,8 @@ import xlrd
 import getopt
 import sys
 import re
+from group import Group
+from member import Member
 from system_object import SystemObject
 
 
@@ -127,13 +129,13 @@ def main():
     ac = calc.ac
     for group in groups:
         apps_group = create_group_email(group, calc)
-        new_group = ac.create_group(apps_group, group)
+        new_group = Group.create_group(apps_group, group)
     for user in users:
         if not (user.get('email') or user.get('email2')):
             continue
-        if user.get('email') and ac.members_insert(user['email'], create_group_email(user['group'], calc)):
+        if user.get('email') and Member.members_insert(ac, user['email'], create_group_email(user['group'])):
             update_db_info(db, {'email': user['email']}, {'nombre': user['name']})
-        if user.get('email2') and ac.members_insert(user['email2'], create_group_email(user['group'], calc)):
+        if user.get('email2') and Member.members_insert(ac, user['email2'], create_group_email(user['group'])):
             update_db_info(db, {'email2': user['email2']}, 'nombre = %s' % user['name'])
 
 if __name__ == "__main__":

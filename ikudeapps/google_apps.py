@@ -36,25 +36,9 @@ class AppsConnect(object):
         self.service = build(config['service_name'], config['service_version'], http=http)
 
 
-    def create_group(self, group, name):
-        #name = config.get('force_group') or name
-        try:
-            new_group = self.service.groups().insert(
-                body={'email': group, 'name': name}).execute()
-            return new_group
-        except errors.HttpError as error:
-            print 'An error occurred: %s' % error
 
-    def members_insert(self, user_email, group_key, role='MEMBER'):
-        try:
-            return self.service.members().insert(body={'role': role, 'email': user_email}, groupKey=group_key).execute()
-        except errors.HttpError as error:
-            # Entity already exist
-            if error.resp.get('status') == '409':
-                return True
-            else:
-                print 'An error occurred: %s, user_email: %s' % (error.resp['status'], user_email)
-                return False
+
+
 
     def copy_group(self, old_key, new_email):
         page_token=True

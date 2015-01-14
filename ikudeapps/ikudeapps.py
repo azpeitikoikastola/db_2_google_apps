@@ -3,6 +3,8 @@
 import sys
 import getopt
 import logging
+from group import Group
+from member import Member
 from orgunits import Orgunits
 from system_object import SystemObject
 from user import User
@@ -18,7 +20,6 @@ def _email_format(email):
     unicode_email = email.decode('unicode-escape')
     return unicode_email.translate(trans_table).lower()
 
-# TODO orgUnitPath to config file
 def _create_user_data(data):
     user = {
         u'name': {u'fullName': data['fullName'],
@@ -28,7 +29,7 @@ def _create_user_data(data):
         u'primaryEmail': data['primaryEmail'],
         u'changePasswordAtNextLogin': True,
         u'password': data['password'],
-        u'orgUnitPath':data['orgUnitPath']}
+        u'orgUnitPath': data['orgUnitPath']}
     return user
 
 def _create_org_path(org_unit_path, new_org_path, year, grade_group):
@@ -45,7 +46,8 @@ def _create_org_path(org_unit_path, new_org_path, year, grade_group):
 
 
 # TODO lehen emailaren hardcodea kendu
-def _format_data(ac, res, domain, def_pass, org_unit_path, new_org_path):
+def _format_data(ac, res, domain, def_pass, org_unit_path, exist_orgunits, new_org_path):
+    created_orgunits = []
     given_name = res[0]
     family_name = res[1]
     full_name = res[2]
@@ -53,12 +55,14 @@ def _format_data(ac, res, domain, def_pass, org_unit_path, new_org_path):
     grade_group = res[6]
     unit_path = _create_org_path(org_unit_path, new_org_path, year, grade_group)
     orgunit = to_unicode(unit_path)
-    exits_orgunits = Orgunits.create_child_orgunits(ac, orgunit)
+    if orgunit not in exist_orgunits:
+        created_orgunits = Orgunits.create_child_orgunits(ac, orgunit)
+        exist_orgunits = []
     user_data = {
         'givenName': to_unicode(given_name),
         'familyName': to_unicode(family_name),
         'fullName': to_unicode(full_name),
-        'orgUnitPath': orgunit in exits_orgunits and orgunit or '/',
+        'orgUnitPath': orgunit in created_orgunits + exist_orgunits and orgunit or '/',
         'password': def_pass,
         'year': year,
         'primaryEmail': _email_format("".join([given_name, family_name.split()[0], year[-2:], "@", domain]))
@@ -66,9 +70,9 @@ def _format_data(ac, res, domain, def_pass, org_unit_path, new_org_path):
     user = _create_user_data(user_data)
     return user
 
-
-
-
+def create_groups(ac, grades, domain):
+    for grade in grades:
+        Group.create_group(ac, '@'.join([grade, domain]), grade)
 
 def main():
     sysconf = SystemObject()
@@ -81,6 +85,7 @@ def main():
     org_unit_path = sysconf.organization_unit_path
     grade = sysconf.grade
     #try:
+    ac = sysconf.ac
     db = sysconf.db
     year = '%'
     course = '%'
@@ -103,6 +108,7 @@ def main():
     #result = db.execute("select nombre0,apellidos,fechanac "
     #                    "from alumno a inner join Curso c on a.idcurso=c.id "
     #                    "where c.descripcion like ? and fechanac like ?", [course, year])
+    create_groups(grade, domain)
     for gr in grade:
         result = db.execute("select al.nombre0, al.apellidos, al.nombre, al.fechanac, al.id, "
                             "curso.descripcion, grupo.descripcion "
@@ -126,12 +132,15 @@ def main():
         exist_orgunits = []
         for res in result:
             if res[0] and res[1]:
-                user_data = _format_data(res, domain, user_default_password, org_unit_path, exist_orgunits)
+                user_data = _format_data(ac, res, domain, user_default_password, org_unit_path, exist_orgunits)
                 print unicode(user_data)
                 try:
-                    new_user = User.create(sysconf.ac, user_data)
+                    new_user = User.create(ac, user_data)
                     exist_orgunits.append(new_user.orgUnitPath)
+                    Member.members_insert(ac, new_user.primaryEmail, '@'.join([grade, domain]))
                 except Exception as e:
+                    user = User.update(ac, user_data['primaryEmail'], user_data)
+                    Member.members_insert(ac, user.primaryEmail, '@'.join([grade, domain]))
                     print e.message
 
                 try:

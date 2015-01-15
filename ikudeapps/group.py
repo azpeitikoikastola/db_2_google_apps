@@ -9,9 +9,6 @@ class Group(object):
         self.email = data.get('email')
         self.name = data.get('name')
 
-    @classmethod
-    def create(cls, data):
-        return Group(data)
 
     @classmethod
     def create(cls, ac, data):

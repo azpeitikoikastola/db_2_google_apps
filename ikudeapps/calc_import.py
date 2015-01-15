@@ -129,7 +129,7 @@ def main():
     ac = calc.ac
     for group in groups:
         apps_group = create_group_email(group, calc)
-        new_group = Group.create_group(apps_group, group)
+        new_group = Group.create(ac, {'email':apps_group, 'name':group})
     for user in users:
         if not (user.get('email') or user.get('email2')):
             continue

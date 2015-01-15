@@ -28,11 +28,12 @@ class User():
 
     @classmethod
     def get(cls, ac, email):
-        try:
-            user = ac.service.users().get(userKey=email).execute()
-            return cls._create_user(user)
-        except errors.HttpError as error:
-            print 'An error occurred: %s, user_email: %s' % (error.resp['status'], data['primaryEmail'])
+        if email:
+            try:
+                user = ac.service.users().get(userKey=email).execute()
+                return cls._create_user(user)
+            except errors.HttpError as error:
+                print 'An error occurred: %s, user_email: %s' % (error.resp['status'], email)
 
     @classmethod
     def update(cls, ac, email, data):

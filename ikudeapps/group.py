@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from ikudeapps.apiclient import errors
+from apiclient import errors
 
 
 class Group(object):

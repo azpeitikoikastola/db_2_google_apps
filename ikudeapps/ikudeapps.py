@@ -48,7 +48,7 @@ def _create_org_path(org_unit_path, new_org_path, year, grade_group):
 # TODO lehen emailaren hardcodea kendu
 def _format_data(ac, res, domain, def_pass, org_unit_path, exist_orgunits, new_org_path):
     created_orgunits = []
-    given_name = res[0]
+    given_name = res[0].split()[0]
     family_name = res[1]
     full_name = res[2]
     year = str(res[3].year)
@@ -71,18 +71,19 @@ def _format_data(ac, res, domain, def_pass, org_unit_path, exist_orgunits, new_o
     return user
 
 def get_db_user_list(db, grade_list):
-    result = db.execute("select al.nombre0, al.apellidos, al.nombre, al.fechanac, al.id, "
-                        "curso.descripcion, grupo.descripcion, al.email "
-                        "from alumno al "
-                        "inner join grupo on grupo.id = alumno.IDGRUPO "
-                        "inner join curso on curso.id = alumno.IDCURSO "
-                        "where al.idcurso in "
-                        "(select curso.id from "
-                        "cursoescolar inner join "
-                        "etapa on cursoescolar.id = etapa.idcursoescolar inner join "
-                        "ciclo on ciclo.idetapa = etapa.id inner join "
-                        "curso on curso.idciclo = ciclo.id "
-                        "where cursoescolar.cerrado='F' and curso.descripcion in ?)", [tuple(grade_list)])
+    sql = "select al.nombre0, al.apellidos, al.nombre, al.fechanac, al.id, " \
+          "curso.descripcion, grupo.descripcion, al.email " \
+          "from alumno al " \
+          "inner join grupo on grupo.id = alumno.IDGRUPO " \
+          "inner join curso on curso.id = alumno.IDCURSO " \
+          "where al.idcurso in " \
+          "(select curso.id from " \
+          "cursoescolar inner join " \
+                        "etapa on cursoescolar.id = etapa.idcursoescolar inner join " \
+                        "ciclo on ciclo.idetapa = etapa.id inner join " \
+                        "curso on curso.idciclo = ciclo.id " \
+                        "where cursoescolar.cerrado='F' and curso.descripcion in %s)" % ("?" if isinstance(grade_list, tuple) and len(grade_list) > 1 else "%s%s%s" % ('(', '?', ')'))
+    result = db.execute(sql, (grade_list,))
     if not result:
         raise Warning ("no results check that grades are correctly set")
     return result
@@ -105,23 +106,22 @@ def create_apps_users_db_add_email(sysconf):
             user = User.get(ac, res[7])
             if not user:
                 user_data = _format_data(
-                    ac, res, domain, sysconf.user_default_password, sysconf.org_unit_path, exist_orgunits)
+                    ac, res, domain, sysconf.user_default_password, sysconf.organization_unit_path, exist_orgunits, sysconf.new_org_path)
                 print unicode(user_data)
                 try:
                     new_user = User.create(ac, user_data)
                     created_users_email.append(new_user.primaryEmail)
                     exist_orgunits.append(new_user.orgUnitPath)
                     #Member.members_insert(ac, new_user.primaryEmail, '@'.join([grade, domain]))
+                    try:
+                        db.execute('update alumno set  email = ? where id = ?', [new_user.primaryEmail, res[4]])
+                        db.commit()
+                    except Exception as e:
+                        db.rollback()
+                        print e.message
                 except Exception as e:
                     #user = User.update(ac, user_data['primaryEmail'], user_data)
                     #Member.members_insert(ac, user.primaryEmail, '@'.join([grade, domain]))
-                    print e.message
-
-                try:
-                    db.execute('update alumno set  email = ? where id = ?', [new_user.primaryEmail, res[4]])
-                    db.commit()
-                except Exception as e:
-                    db.rollback()
                     print e.message
             else:
                 print "User: %s already exist with email: %s" % (user.fullName, user.primaryEmail)
@@ -138,11 +138,13 @@ def sync_apps_users(sysconf, ignore=None):
     for res in result:
         if res[0] and res[1] and res[3] and res[7] and res[7] not in ignore:
             user_data = _format_data(
-                ac, res, domain, sysconf.user_default_password, sysconf.org_unit_path, exist_orgunits)
+                ac, res, domain, sysconf.user_default_password, sysconf.organization_unit_path, exist_orgunits, sysconf.new_org_path)
             print unicode(user_data)
             try:
-                # without pop primarykey, the email can be overridden if the user name has a modification
-                user_data.pop('primaryKey')
+                # without pop primaryEmail, the email can be overridden if the user name has a modification
+                user_data.pop('primaryEmail')
+                user_data.pop('changePasswordAtNextLogin')
+                user_data.pop('password')
                 new_user = User.update(ac, res[7], user_data)
                 exist_orgunits.append(new_user.orgUnitPath)
                 #Member.members_insert(ac, new_user.primaryEmail, '@'.join([grade, domain]))
@@ -193,7 +195,7 @@ def main():
     created_users = create_apps_users_db_add_email(sysconf)
     sync_apps_users(sysconf, ignore=created_users)
     #TODO
-    create_apps_group_add_members(sysconf)
+    #create_apps_group_add_members(sysconf)
 
 if __name__ == "__main__":
     main()

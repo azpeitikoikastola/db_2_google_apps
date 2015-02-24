@@ -31,7 +31,6 @@ class DbConnect(object):
                 pass
         except Exception as e:
             print e.message
-            self.db.rollback()
 
     def commit(self):
         return self.db.commit()

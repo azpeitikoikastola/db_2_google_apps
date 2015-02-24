@@ -5,9 +5,9 @@ class User():
 
     def __init__(self, data):
         if data.get('name'):
-            self.givenName = data.get('givenName')
-            self.familyName = data.get('familyName')
-            self.fullName = data.get('fullName')
+            self.givenName = data['name'].get('givenName')
+            self.familyName = data['name'].get('familyName')
+            self.fullName = data['name'].get('fullName')
         self.primaryEmail = data.get('primaryEmail')
         self.orgUnitPath = data.get('orgUnitPath')
         self.password = data.get('password')
@@ -38,7 +38,7 @@ class User():
     @classmethod
     def update(cls, ac, email, data):
         try:
-            user = ac.service.users().insert(body=data, userKey=email).execute()
+            user = ac.service.users().update(body=data, userKey=email).execute()
             return cls._create_user(user)
         except errors.HttpError as error:
             print 'An error occurred: %s, user_email: %s' % (error.resp['status'], data['primaryEmail'])

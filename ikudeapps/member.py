@@ -23,7 +23,7 @@ class Member(object):
             print 'An error occurred: %s' % error
 
     @classmethod
-    def members_insert(cls, ac, user_email, group_key, role='MEMBER'):
+    def member_insert(cls, ac, user_email, group_key, role='MEMBER'):
         try:
             return ac.service.members().insert(body={'role': role, 'email': user_email}, groupKey=group_key).execute()
         except errors.HttpError as error:

@@ -16,7 +16,8 @@ def to_unicode(text):
     return text.decode('unicode-escape')
 
 def _email_format(email):
-    trans_table = dict(zip([ord(x) for x in u'áéíóúñÁÉÍÓÚÑ'], u'aeiounAEIOUN'))
+    trans_table = dict(zip([ord(x) for x in u'áéíóúñÁÉÍÓÚÑ '], u'aeiounAEIOUN'))
+    trans_table.update(trans_table.fromkeys(map(ord,'  -'), None))
     unicode_email = email.decode('unicode-escape')
     return unicode_email.translate(trans_table).lower()
 
@@ -71,6 +72,9 @@ def _format_data(ac, res, domain, def_pass, org_unit_path, exist_orgunits, new_o
     return user
 
 def get_db_user_list(db, grade_list):
+    if not isinstance(grade_list, tuple):
+        grade_list = (grade_list,)
+
     sql = "select al.nombre0, al.apellidos, al.nombre, al.fechanac, al.id, " \
           "curso.descripcion, grupo.descripcion, al.email " \
           "from alumno al " \
@@ -82,17 +86,29 @@ def get_db_user_list(db, grade_list):
                         "etapa on cursoescolar.id = etapa.idcursoescolar inner join " \
                         "ciclo on ciclo.idetapa = etapa.id inner join " \
                         "curso on curso.idciclo = ciclo.id " \
-                        "where cursoescolar.cerrado='F' and curso.descripcion in %s)" % ("?" if isinstance(grade_list, tuple) and len(grade_list) > 1 else "%s%s%s" % ('(', '?', ')'))
-    result = db.execute(sql, (grade_list,))
+                        "where cursoescolar.cerrado='F' and curso.descripcion in (%s))" % ('?,' * len(grade_list))[:-1]
+    result = db.execute(sql, grade_list)
     if not result:
-        raise Warning ("no results check that grades are correctly set")
+        raise Warning("no results check that grades are correctly set")
     return result
 
 def create_apps_group_add_members(sysconf):
     ac = sysconf.ac
+    db = sysconf.db
     domain = sysconf.domain
-    for grade in sysconf.grade:
-        Group.create_group(ac, '@'.join([grade, domain]), grade)
+    groups = {}
+    result = get_db_user_list(db, sysconf.grade)
+    for res in result:
+        if res[7] and res[6]:
+            if not groups.get(res[6]):
+                # to sync the grade we need delete old group first
+                Group.delete(ac, _email_format('@'.join([res[6], domain])))
+                members_group = Group.create(ac, {'email':_email_format('@'.join([res[6], domain]))})
+                groups[res[6]] = members_group
+            Member.member_insert(ac, res[7], groups[res[6]].email)
+        else:
+            # logea eman
+            pass
 
 def create_apps_users_db_add_email(sysconf):
     ac = sysconf.ac
@@ -112,7 +128,6 @@ def create_apps_users_db_add_email(sysconf):
                     new_user = User.create(ac, user_data)
                     created_users_email.append(new_user.primaryEmail)
                     exist_orgunits.append(new_user.orgUnitPath)
-                    #Member.members_insert(ac, new_user.primaryEmail, '@'.join([grade, domain]))
                     try:
                         db.execute('update alumno set  email = ? where id = ?', [new_user.primaryEmail, res[4]])
                         db.commit()
@@ -120,8 +135,6 @@ def create_apps_users_db_add_email(sysconf):
                         db.rollback()
                         print e.message
                 except Exception as e:
-                    #user = User.update(ac, user_data['primaryEmail'], user_data)
-                    #Member.members_insert(ac, user.primaryEmail, '@'.join([grade, domain]))
                     print e.message
             else:
                 print "User: %s already exist with email: %s" % (user.fullName, user.primaryEmail)
@@ -147,10 +160,7 @@ def sync_apps_users(sysconf, ignore=None):
                 user_data.pop('password')
                 new_user = User.update(ac, res[7], user_data)
                 exist_orgunits.append(new_user.orgUnitPath)
-                #Member.members_insert(ac, new_user.primaryEmail, '@'.join([grade, domain]))
             except Exception as e:
-                #user = User.update(ac, user_data['primaryEmail'], user_data)
-                #Member.members_insert(ac, user.primaryEmail, '@'.join([grade, domain]))
                 print e.message
 
 
@@ -185,17 +195,9 @@ def main():
     #                    "from alumno a inner join Curso c on a.idcurso=c.id "
     #                    "where c.descripcion like ? and fechanac like ?", [course, year])
 
-    #TODO 4 funtziyo bat ikasliek sortzeko (sortutako ikaslien emailek bueltatzetxik) ta ikudean email kanpuen sortudan emaile idatzikoik beteta eon eo ez,
-    #TODO bestie grupuek sortu ta memberrak gehitu(sortuta bazarek ez memberrak ez gehitu, bestela memberrak gehitu),
-    #TODO  bestie sinkronizaziyue ikasliena(ikasletan updatiek emaile ibilita izenak, orgunitek... eta ) erabiltzailiek sortzekun antzekue createn partez update ibilita.
-    #TODO azkena grupuen sikronizaziyue grupuen birsorketie(delete berriz sortu ta memberrak gehitu)
-    #TODO kasu danetako beheko sqliek baliyo dula usteiat
-
-
     created_users = create_apps_users_db_add_email(sysconf)
     sync_apps_users(sysconf, ignore=created_users)
-    #TODO
-    #create_apps_group_add_members(sysconf)
+    create_apps_group_add_members(sysconf)
 
 if __name__ == "__main__":
     main()

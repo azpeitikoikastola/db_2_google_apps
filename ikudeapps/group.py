@@ -27,9 +27,9 @@ class Group(object):
         try:
             group = ac.service.groups().get(
                 groupKey=key).execute()
-            return Group.create(group)
+            return Group._create(group)
         except errors.HttpError as error:
-            print 'An error occurred: %s' % error
+            print 'An error occurred getting group: %s' % error
 
     @classmethod
     def delete(cls, ac, key):

@@ -3,6 +3,7 @@
 import sys
 import getopt
 import logging
+import time
 from group import Group
 from member import Member
 from orgunits import Orgunits
@@ -71,6 +72,18 @@ def _format_data(ac, res, domain, def_pass, org_unit_path, exist_orgunits, new_o
     user = _create_user_data(user_data)
     return user
 
+
+def wait_until_group_creation(ac, email):
+    for i in [1, 3, 5]:
+        group = Group.get(ac, email)
+        if not group:
+            time.sleep(i)
+            print 'Retrying...'
+        else:
+            print '{} is created and accessible'.format(group.email)
+            return
+
+
 def get_db_user_list(db, grade_list):
     if not isinstance(grade_list, tuple):
         grade_list = (grade_list,)
@@ -92,6 +105,7 @@ def get_db_user_list(db, grade_list):
         raise Warning("no results check that grades are correctly set")
     return result
 
+
 def create_apps_group_add_members(sysconf):
     ac = sysconf.ac
     db = sysconf.db
@@ -102,9 +116,11 @@ def create_apps_group_add_members(sysconf):
         if res[7] and res[6]:
             if not groups.get(res[6]):
                 # to sync the grade we need delete old group first
-                Group.delete(ac, _email_format('@'.join([res[6], domain])))
-                members_group = Group.create(ac, {'email':_email_format('@'.join([res[6], domain]))})
+                email = _email_format('@'.join([res[6], domain]))
+                Group.delete(ac, email)
+                members_group = Group.create(ac, {'email': email})
                 groups[res[6]] = members_group
+                wait_until_group_creation(ac, email)
             Member.member_insert(ac, res[7], groups[res[6]].email)
         else:
             # logea eman
@@ -198,6 +214,7 @@ def main():
     created_users = create_apps_users_db_add_email(sysconf)
     sync_apps_users(sysconf, ignore=created_users)
     create_apps_group_add_members(sysconf)
+    #TODO clean groups and org units
 
 if __name__ == "__main__":
     main()

@@ -35,11 +35,6 @@ class AppsConnect(object):
         http = credentials.authorize(http)
         self.service = build(config['service_name'], config['service_version'], http=http)
 
-
-
-
-
-
     def copy_group(self, old_key, new_email):
         page_token=True
         all_members = []

@@ -12,15 +12,17 @@ from user import User
 
 _logger = logging.getLogger(__name__)
 
-#### TODO create user class and modify methods
+
 def to_unicode(text):
     return text.decode('unicode-escape')
+
 
 def _email_format(email):
     trans_table = dict(zip([ord(x) for x in u'áéíóúñÁÉÍÓÚÑ '], u'aeiounAEIOUN'))
     trans_table.update(trans_table.fromkeys(map(ord,'  -'), None))
     unicode_email = email.decode('unicode-escape')
     return unicode_email.translate(trans_table).lower()
+
 
 def _create_user_data(data):
     user = {
@@ -33,6 +35,7 @@ def _create_user_data(data):
         u'password': data['password'],
         u'orgUnitPath': data['orgUnitPath']}
     return user
+
 
 def _create_org_path(org_unit_path, new_org_path, year, grade_group):
     if new_org_path not in ['group', 'year', '']:
@@ -126,6 +129,7 @@ def create_apps_group_add_members(sysconf):
             # logea eman
             pass
 
+
 def create_apps_users_db_add_email(sysconf):
     ac = sysconf.ac
     db = sysconf.db
@@ -156,6 +160,7 @@ def create_apps_users_db_add_email(sysconf):
                 print "User: %s already exist with email: %s" % (user.fullName, user.primaryEmail)
     return created_users_email
 
+
 def sync_apps_users(sysconf, ignore=None):
     if not ignore:
         ignore=[]
@@ -178,8 +183,6 @@ def sync_apps_users(sysconf, ignore=None):
                 exist_orgunits.append(new_user.orgUnitPath)
             except Exception as e:
                 print e.message
-
-
 
 
 def main():

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 from apiclient.discovery import build
-from oauth2client.client import SignedJwtAssertionCredentials
+from oauth2client.service_account import ServiceAccountCredentials
 import httplib2
 from apiclient import errors
 
@@ -9,10 +9,8 @@ class AppsConnect(object):
 
     def check_mandatory_fields(self, config):
         warning = []
-        if not config.get('key_path'):
-            warning.append('key_path')
-        if not config.get('credentials_email'):
-            warning.append('credentials_email')
+        if not config.get('api_key'):
+            warning.append('api_key')
         if not config.get('scope'):
             warning.append('scope')
         if not config.get('admin_email'):
@@ -24,15 +22,16 @@ class AppsConnect(object):
         if warning:
             raise Warning('Honako eremuak beharrezkoak dira', ', '.join(warning))
 
+
     def __init__(self, config):
         self.check_mandatory_fields(config)
-        with open(config['key_path'], 'r') as f:
-            key = f.read()
-        credentials = SignedJwtAssertionCredentials(config['credentials_email'],
-                                                    key, scope=list(config['scope']),
-                                                    sub=config['admin_email'])
+        credentials = ServiceAccountCredentials.from_json_keyfile_name(
+            config['api_key'],
+            list(config['scope']),
+            )
+        delegated_credentials = credentials.create_delegated(config['admin_email'])
         http = httplib2.Http()
-        http = credentials.authorize(http)
+        http = delegated_credentials.authorize(http)
         self.service = build(config['service_name'], config['service_version'], http=http)
 
     def copy_group(self, old_key, new_email):

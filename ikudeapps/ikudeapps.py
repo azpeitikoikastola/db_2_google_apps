@@ -189,34 +189,27 @@ def main():
     sysconf = SystemObject()
     config = {}
     argv = sys.argv
-    options, args = getopt.getopt(argv[1:], 'y:c', [])
+    options, args = getopt.getopt(argv[1:], 'csg', [])
     execfile("config.conf", config)
-    #try:
-    year = '%'
-    course = '%'
-    for opt, value in options:
-        if opt in ['-y']:
-            assert len(value) == 4, "urtea 4 digitotan"
-            year = ''.join([value, '-%'])
-        if opt in ['-c']:
-            course = value.upper()
-    # aurtengo grupuek ateatzeko grupo->curso->ciclo->etapa->curso-escolar
-    #result = cr.execute("select nombre, fechanac
-    #             from alumno
-    #             where idgrupo in (select grupo.id
-    #                               from cursoescolar inner join
-    #                                    etapa on cursoescolar.id = etapa.idcursoescolar inner join
-    #                                    ciclo on ciclo.idetapa = etapa.id inner join
-    #                                    curso on curso.idciclo = ciclo.id inner join
-    #                                    grupo on grupo.idcurso = curso.id
-    #                               where cursoescolar.cerrado='F' and grupo.descripcion like ?)",['DBH-1%'])
-    #result = db.execute("select nombre0,apellidos,fechanac "
-    #                    "from alumno a inner join Curso c on a.idcurso=c.id "
-    #                    "where c.descripcion like ? and fechanac like ?", [course, year])
+    created_users=[]
+    if not options:
+        created_users = create_apps_users_db_add_email(sysconf)
+        sync_apps_users(sysconf, ignore=created_users)
+        create_apps_group_add_members(sysconf)
+    else:
+        for opt, value in options:
+            if opt in ['-c']:
+                created_users = create_apps_users_db_add_email(sysconf)
+                break
+        for opt, value in options:
+            if opt in ['-s']:
+                sync_apps_users(sysconf, ignore=created_users)
+                break
+        for opt, value in options:
+            if opt in ['-g']:
+                create_apps_group_add_members(sysconf)
+                break
 
-    created_users = create_apps_users_db_add_email(sysconf)
-    sync_apps_users(sysconf, ignore=created_users)
-    create_apps_group_add_members(sysconf)
     #TODO clean groups and org units
 
 if __name__ == "__main__":

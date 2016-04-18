@@ -33,6 +33,8 @@ class User():
                 user = ac.service.users().get(userKey=email).execute()
                 return cls._create_user(user)
             except errors.HttpError as error:
+                if error.resp.status == 403:
+                    raise Exception(error)
                 print 'An error occurred: %s, user_email: %s' % (error.resp['status'], email)
 
     @classmethod

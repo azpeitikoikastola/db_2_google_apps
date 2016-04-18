@@ -30,6 +30,8 @@ class Member(object):
             # Entity already exist
             if error.resp.get('status') == '409':
                 return True
+            elif error.resp.status == 403:
+                raise Exception(error)
             else:
                 print 'An error occurred: %s, user_email: %s' % (error.resp['status'], user_email)
                 return False

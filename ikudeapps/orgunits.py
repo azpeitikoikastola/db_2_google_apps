@@ -37,29 +37,32 @@ class Orgunits(object):
                 org_unit = ac.service.orgunits().get(orgUnitPath=unit, customerId='my_customer').execute()
                 unit_exist.append(org_unit['orgUnitPath'])
             except errors.HttpError as error:
-                user_input = raw_input("At least one child of %s organization unit doesn't exist. "
-                                       "Do you want to create the whole structure? (Y/N): " % unit)
-                while user_input not in ['Y', 'N']:
-                    user_input = raw_input("Please type Y (yes) or N (no): ")
-                if user_input == 'Y':
-                    parent = ''
-                    org_paths = unit.split('/')
-                    for org_path in org_paths:
-                        try:
-                            org_unit = ac.service.orgunits().get(
-                                orgUnitPath=parent and '/'.join([parent, org_path]) or org_path,
-                                customerId='my_customer').execute()
-                            parent = org_unit['orgUnitPath']
-                            unit_exist.append(org_unit['orgUnitPath'])
-                        except errors.HttpError as error:
+                if error.resp.status == 404:
+                    user_input = raw_input("At least one child of %s organization unit doesn't exist. "
+                                           "Do you want to create the whole structure? (Y/N): " % unit)
+                    while user_input not in ['Y', 'N']:
+                        user_input = raw_input("Please type Y (yes) or N (no): ")
+                    if user_input == 'Y':
+                        parent = ''
+                        org_paths = unit.split('/')
+                        for org_path in org_paths:
                             try:
-                                new_unit = ac.service.orgunits().insert(
-                                    body={'name': org_path, 'parentOrgUnitPath': parent or '/'},
+                                org_unit = ac.service.orgunits().get(
+                                    orgUnitPath=parent and '/'.join([parent, org_path]) or org_path,
                                     customerId='my_customer').execute()
-                                parent = new_unit['orgUnitPath']
-                                unit_exist.append(new_unit['orgUnitPath'])
+                                parent = org_unit['orgUnitPath']
+                                unit_exist.append(org_unit['orgUnitPath'])
                             except errors.HttpError as error:
-                                print error
+                                try:
+                                    new_unit = ac.service.orgunits().insert(
+                                        body={'name': org_path, 'parentOrgUnitPath': parent or '/'},
+                                        customerId='my_customer').execute()
+                                    parent = new_unit['orgUnitPath']
+                                    unit_exist.append(new_unit['orgUnitPath'])
+                                except errors.HttpError as error:
+                                    print error
+                else:
+                    raise Exception(error)
         return unit_exist
 
     @classmethod
@@ -78,6 +81,8 @@ class Orgunits(object):
                 orgunit = ac.service.orgunits().get(orgUnitPath=name, customerId='my_customer').execute()
                 return cls._create_orgunit(orgunit)
             except errors.HttpError as error:
+                if error.resp.status == 403:
+                    raise Exception(error)
                 print 'An error occurred: %s, organization unit: %s' % (error.resp['status'], name['name'])
         else:
             raise Warning("Name must be string. Use get_list method to get a list of organization units")

@@ -37,6 +37,8 @@ class Group(object):
             return ac.service.groups().delete(
                 groupKey=key).execute()
         except errors.HttpError as error:
+            if error.resp.status == 403:
+                    raise Exception(error)
             print 'An error occurred: %s' % error
 
 # {

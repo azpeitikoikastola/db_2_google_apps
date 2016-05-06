@@ -1,12 +1,14 @@
 # -*- coding: utf-8 -*-
 
-import xlrd
 import getopt
-import sys
 import re
-from group import Group
-from member import Member
-from system_object import SystemObject
+import sys
+
+import xlrd
+
+from ikudeapps.gappsconnect.group import Group
+from ikudeapps.gappsconnect.member import Member
+from .ikudeapps import SystemObject
 
 
 class CalcImport(SystemObject):

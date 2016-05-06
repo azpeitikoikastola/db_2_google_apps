@@ -1,16 +1,46 @@
 # -*- coding: utf-8 -*-
 
-import sys
 import getopt
 import logging
+import sys
 import time
-from group import Group
-from member import Member
-from orgunits import Orgunits
-from system_object import SystemObject
-from user import User
+
+from ikudeapps.gappsconnect.group import Group
+from ikudeapps.gappsconnect.member import Member
+from ikudeapps.gappsconnect.orgunits import Orgunits
+from ikudeapps.gappsconnect.user import User
+from ikudeapps.gappsconnect.google_apps import AppsConnect
+from ikudeapps.db_manager import DbConnect
 
 _logger = logging.getLogger(__name__)
+
+SERVICE_NAME = 'admin'
+SERVICE_VERSION = 'directory_v1'
+SCOPES = ['https://www.googleapis.com/auth/admin.directory.user',
+          'https://www.googleapis.com/auth/admin.directory.group',
+          'https://www.googleapis.com/auth/admin.directory.group.member',
+          'https://www.googleapis.com/auth/admin.directory.orgunit']
+
+
+class SystemObject(object):
+
+    def __init__(self):
+        config = {}
+        execfile("config.conf", config)
+        self.domain = config.get('domain')
+        self.user_default_password = config.get('user_default_password')
+        self.db = DbConnect(config)
+        self.ac = AppsConnect(config)
+        self.grade = config.get('grade')
+        self.organization_unit_path = config.get('organization_unit_path')
+        self.new_org_path = config.get('new_org_path')
+        self.group_suffix = config.get('group_suffix', '')
+        self.group_prefix = config.get('group_prefix', '')
+        self.force_group = config.get('force_group')
+        self.db_update_columns = config.get('db_update_columns')
+        self.scopes = SCOPES
+        self.service_name = SERVICE_NAME
+        self.service_version = SERVICE_VERSION
 
 
 def to_unicode(text):
@@ -187,11 +217,9 @@ def sync_apps_users(sysconf, ignore=None):
 
 def main():
     sysconf = SystemObject()
-    config = {}
     argv = sys.argv
     options, args = getopt.getopt(argv[1:], 'csg', [])
-    execfile("config.conf", config)
-    created_users=[]
+    created_users = []
     if not options:
         created_users = create_apps_users_db_add_email(sysconf)
         sync_apps_users(sysconf, ignore=created_users)

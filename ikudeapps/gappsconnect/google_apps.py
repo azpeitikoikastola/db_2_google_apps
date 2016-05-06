@@ -11,23 +11,16 @@ class AppsConnect(object):
         warning = []
         if not config.get('api_key'):
             warning.append('api_key')
-        if not config.get('scope'):
-            warning.append('scope')
         if not config.get('admin_email'):
             warning.append('admin_email')
-        if not config.get('service_name'):
-            warning.append('service_name')
-        if not config.get('service_version'):
-            warning.append('service_version')
         if warning:
             raise Warning('Honako eremuak beharrezkoak dira', ', '.join(warning))
-
 
     def __init__(self, config):
         self.check_mandatory_fields(config)
         credentials = ServiceAccountCredentials.from_json_keyfile_name(
             config['api_key'],
-            list(config['scope']),
+            config['scopes'],
             )
         delegated_credentials = credentials.create_delegated(config['admin_email'])
         http = httplib2.Http()

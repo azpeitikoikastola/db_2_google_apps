@@ -2,36 +2,45 @@
 from apiclient.discovery import build
 from oauth2client.service_account import ServiceAccountCredentials
 import httplib2
-from apiclient import errors
 
 
 class AppsConnect(object):
 
-    def check_mandatory_fields(self, config):
+    def check_mandatory_fields(self, api_key, scopes, delegation_email,
+                               service_name, service_version):
         warning = []
-        if not config.get('api_key'):
+        if not api_key:
             warning.append('api_key')
-        if not config.get('admin_email'):
-            warning.append('admin_email')
+        if not scopes:
+            warning.append('scopes')
+        if not service_name:
+            warning.append('service_name')
+        if not service_version:
+            warning.append('service_version')
+        if not delegation_email:
+            print Warning('"delegated_email" not supplied. May be mandatory')
         if warning:
-            raise Warning('Honako eremuak beharrezkoak dira', ', '.join(warning))
+            raise Warning('Mandatory arguments', ', '.join(warning))
 
-    def __init__(self, config):
-        self.check_mandatory_fields(config)
+    def __init__(self, api_key=None, scopes=None, delegation_email=None,
+                 service_name=None, service_version=None):
+        self.check_mandatory_fields(api_key, scopes, delegation_email,
+                                    service_name, service_version)
         credentials = ServiceAccountCredentials.from_json_keyfile_name(
-            config['api_key'],
-            config['scopes'],
+            api_key,
+            scopes,
             )
-        delegated_credentials = credentials.create_delegated(config['admin_email'])
+        delegated_credentials = credentials.create_delegated(delegation_email)
         http = httplib2.Http()
         http = delegated_credentials.authorize(http)
-        self.service = build(config['service_name'], config['service_version'], http=http)
+        self.service = build(service_name, service_version, http=http)
 
     def copy_group(self, old_key, new_email):
-        page_token=True
+        page_token = True
         all_members = []
         while page_token:
-            data = self.service.members().list({'pageToken': page_token}, groupKey=old_key).execute()
+            data = self.service.members().list({'pageToken': page_token},
+                                               groupKey=old_key).execute()
             all_members.extend(data.get('members'))
             page_token = data.get('nextPageToken')
 
@@ -40,7 +49,7 @@ class AppsConnect(object):
             self.members_insert(member['email'], new_email)
         return new_group
 
-### Singleton#########################
+# Singleton#########################
 
 # class _Singleton(object):
 #

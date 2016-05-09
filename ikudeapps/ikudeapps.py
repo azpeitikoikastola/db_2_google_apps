@@ -5,12 +5,12 @@ import logging
 import sys
 import time
 
-from ikudeapps.gappsconnect.group import Group
-from ikudeapps.gappsconnect.member import Member
-from ikudeapps.gappsconnect.orgunits import Orgunits
-from ikudeapps.gappsconnect.user import User
-from ikudeapps.gappsconnect.google_apps import AppsConnect
-from ikudeapps.db_manager import DbConnect
+from gappsconnect.group import Group
+from gappsconnect.member import Member
+from gappsconnect.orgunits import Orgunits
+from gappsconnect.user import User
+from gappsconnect.google_apps import AppsConnect
+from db_manager import DbConnect
 
 _logger = logging.getLogger(__name__)
 
@@ -27,10 +27,16 @@ class SystemObject(object):
     def __init__(self):
         config = {}
         execfile("config.conf", config)
+        config['scopes'] = SCOPES
+        config['service_name'] = SERVICE_NAME
+        config['service_version'] = SERVICE_VERSION
         self.domain = config.get('domain')
         self.user_default_password = config.get('user_default_password')
         self.db = DbConnect(config)
-        self.ac = AppsConnect(config)
+        self.ac = AppsConnect(api_key=config['api_key'], scopes=SCOPES,
+                              delegation_email=config['delegation_email'],
+                              service_name=SERVICE_NAME,
+                              service_version=SERVICE_VERSION)
         self.grade = config.get('grade')
         self.organization_unit_path = config.get('organization_unit_path')
         self.new_org_path = config.get('new_org_path')
@@ -38,9 +44,6 @@ class SystemObject(object):
         self.group_prefix = config.get('group_prefix', '')
         self.force_group = config.get('force_group')
         self.db_update_columns = config.get('db_update_columns')
-        self.scopes = SCOPES
-        self.service_name = SERVICE_NAME
-        self.service_version = SERVICE_VERSION
 
 
 def to_unicode(text):

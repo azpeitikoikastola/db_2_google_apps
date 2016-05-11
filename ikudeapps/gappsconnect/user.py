@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 from apiclient import errors
 
-class User():
+
+class User(object):
 
     def __init__(self, data):
         if data.get('name'):

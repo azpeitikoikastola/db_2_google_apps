@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 from apiclient import errors
+from member import Member
 
 
 class Group(object):
@@ -40,6 +41,20 @@ class Group(object):
             if error.resp.status == 403:
                     raise Exception(error)
             print 'An error occurred: %s' % error
+
+    def copy_group(self, ac, old_key, new_email):
+        page_token = True
+        all_members = []
+        while page_token:
+            data = ac.service.members().list({'pageToken': page_token},
+                                               groupKey=old_key).execute()
+            all_members.extend(data.get('members'))
+            page_token = data.get('nextPageToken')
+
+        new_group = self.create(ac, new_email)
+        for member in all_members:
+            Member.members_insert(ac, member['email'], new_email)
+        return new_group
 
 # {
 #   "kind": "admin#directory#group",

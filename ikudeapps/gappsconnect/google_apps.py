@@ -35,20 +35,6 @@ class AppsConnect(object):
         http = delegated_credentials.authorize(http)
         self.service = build(service_name, service_version, http=http)
 
-    def copy_group(self, old_key, new_email):
-        page_token = True
-        all_members = []
-        while page_token:
-            data = self.service.members().list({'pageToken': page_token},
-                                               groupKey=old_key).execute()
-            all_members.extend(data.get('members'))
-            page_token = data.get('nextPageToken')
-
-        new_group = self.create_group(new_email)
-        for member in all_members:
-            self.members_insert(member['email'], new_email)
-        return new_group
-
 # Singleton#########################
 
 # class _Singleton(object):

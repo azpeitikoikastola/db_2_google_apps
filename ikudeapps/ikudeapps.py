@@ -51,8 +51,9 @@ def to_unicode(text):
 
 
 def _email_format(email):
-    trans_table = dict(zip([ord(x) for x in u'áéíóúñÁÉÍÓÚÑ '], u'aeiounAEIOUN'))
-    trans_table.update(trans_table.fromkeys(map(ord,'  -'), None))
+    trans_table = dict(zip([ord(x) for x in u'áéíóúñÁÉÍÓÚÑ '],
+                           u'aeiounAEIOUN'))
+    trans_table.update(trans_table.fromkeys(map(ord, '  -'), None))
     unicode_email = email.decode('unicode-escape')
     return unicode_email.translate(trans_table).lower()
 
@@ -84,14 +85,16 @@ def _create_org_path(org_unit_path, new_org_path, year, grade_group):
 
 
 # TODO lehen emailaren hardcodea kendu
-def _format_data(ac, res, domain, def_pass, org_unit_path, exist_orgunits, new_org_path):
+def _format_data(ac, res, domain, def_pass, org_unit_path,
+                 exist_orgunits, new_org_path):
     created_orgunits = []
     given_name = res[0].split()[0]
     family_name = res[1]
     full_name = res[2]
     year = str(res[3].year)
     grade_group = res[6]
-    unit_path = _create_org_path(org_unit_path, new_org_path, year, grade_group)
+    unit_path = _create_org_path(org_unit_path, new_org_path, year,
+                                 grade_group)
     orgunit = to_unicode(unit_path)
     if orgunit not in exist_orgunits:
         created_orgunits = Orgunits.create_child_orgunits(ac, orgunit)
@@ -103,7 +106,9 @@ def _format_data(ac, res, domain, def_pass, org_unit_path, exist_orgunits, new_o
         'orgUnitPath': orgunit in created_orgunits + exist_orgunits and orgunit or '/',
         'password': def_pass,
         'year': year,
-        'primaryEmail': _email_format("".join([given_name, family_name.split()[0], year[-2:], "@", domain]))
+        'primaryEmail': _email_format(
+            "".join([given_name, family_name.split()[0],
+                     year[-2:], "@", domain]))
                 }
     user = _create_user_data(user_data)
     return user
@@ -175,14 +180,17 @@ def create_apps_users_db_add_email(sysconf):
             user = User.get(ac, res[7])
             if not user:
                 user_data = _format_data(
-                    ac, res, domain, sysconf.user_default_password, sysconf.organization_unit_path, exist_orgunits, sysconf.new_org_path)
+                    ac, res, domain, sysconf.user_default_password,
+                    sysconf.organization_unit_path, exist_orgunits,
+                    sysconf.new_org_path)
                 print unicode(user_data)
                 try:
                     new_user = User.create(ac, user_data)
                     created_users_email.append(new_user.primaryEmail)
                     exist_orgunits.append(new_user.orgUnitPath)
                     try:
-                        db.execute('update alumno set  email = ? where id = ?', [new_user.primaryEmail, res[4]])
+                        db.execute('update alumno set  email = ? where id = ?',
+                                   [new_user.primaryEmail, res[4]])
                         db.commit()
                     except Exception as e:
                         db.rollback()
@@ -205,7 +213,9 @@ def sync_apps_users(sysconf, ignore=None):
     for res in result:
         if res[0] and res[1] and res[3] and res[7] and res[7] not in ignore:
             user_data = _format_data(
-                ac, res, domain, sysconf.user_default_password, sysconf.organization_unit_path, exist_orgunits, sysconf.new_org_path)
+                ac, res, domain, sysconf.user_default_password,
+                sysconf.organization_unit_path, exist_orgunits,
+                sysconf.new_org_path)
             print unicode(user_data)
             try:
                 # without pop primaryEmail, the email can be overridden if the user name has a modification
